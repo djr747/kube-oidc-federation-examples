@@ -49,6 +49,8 @@ Every Kubernetes cluster runs an OIDC-compliant identity provider as part of the
 | `aud` | Configurable audience (e.g. `api://AzureADTokenExchange`, `sts.amazonaws.com`) |
 | `exp` | Short expiration (typically 1 hour) |
 
+**Token Validity:** Tokens are short-lived by design. The default validity period is **1 hour** (3600 seconds), but cluster administrators can configure this via the ServiceAccount token projection settings (valid range: 10 minutes to 1 year). The kubelet automatically refreshes tokens before expiry — it proactively rotates tokens when they reach 80% of their TTL or after 24 hours, whichever comes first.
+
 The cluster publishes its OIDC discovery document (`/.well-known/openid-configuration`) and JWKS (public signing keys) at the issuer URL. Any external identity provider can validate tokens by fetching these public keys — **no shared secret required**.
 
 ### SIG Auth References
