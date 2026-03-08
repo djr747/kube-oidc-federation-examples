@@ -131,7 +131,7 @@ variable "tags" {
   description = "Common tags applied to all AWS resources."
   type        = map(string)
   default = {
-    Project     = "drocx-eks-demo"
+    Project     = "eks-azure-workload-identity-demo"
     Environment = "demo"
     ManagedBy   = "terraform"
   }

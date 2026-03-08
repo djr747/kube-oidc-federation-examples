@@ -22,7 +22,7 @@ AWS EKS (OIDC provider)
 | **EKS version** | 1.32 |
 | **Node group** | `t3.micro` Spot instances (min 1 / desired 2 / max 3) in **public subnets** (no NAT GW) |
 | **Networking** | New VPC, 3 private + 3 public subnets; control-plane ENIs in private, worker nodes in public |
-| **State backend** | S3 bucket `drocx-s3-bucket` |
+| **State backend** | S3 bucket `my-s3-bucket` |
 | **Azure WI webhook** | `workload-identity-webhook` Helm chart v1.5.1, `azure-workload-identity-system` namespace |
 | **Demo workload** | `msal-go` Deployment (`ghcr.io/azure/azure-workload-identity/msal-go:latest`) in namespace `msal-go-demo` |
 
@@ -213,7 +213,7 @@ $(terraform output -raw kubeconfig_command_temp)
 Then set the environment variable to use it:
 
 ```bash
-export KUBECONFIG=/tmp/drocx_kubeconfig
+export KUBECONFIG=/tmp/demo_kubeconfig
 ```
 
 (Or omit this step and update your regular kubeconfig with `$(terraform output -raw kubeconfig_command)` if you prefer.)
@@ -243,7 +243,7 @@ With the federated credential in place, the msal-go pod can now exchange its OID
 **Make sure your temporary kubeconfig is in use:**
 
 ```bash
-export KUBECONFIG=/tmp/drocx_kubeconfig
+export KUBECONFIG=/tmp/demo_kubeconfig
 # Or if you're using your regular kubeconfig, that works too
 ```
 

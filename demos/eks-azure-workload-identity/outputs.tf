@@ -35,7 +35,7 @@ output "kubeconfig_command" {
 
 output "kubeconfig_command_temp" {
   description = "Run this command to save the kubeconfig to a temporary file instead of ~/.kube/config."
-  value       = "aws eks update-kubeconfig --region ${var.aws_region} --name ${module.eks.cluster_name} --kubeconfig /tmp/drocx_kubeconfig"
+  value       = "aws eks update-kubeconfig --region ${var.aws_region} --name ${module.eks.cluster_name} --kubeconfig /tmp/demo_kubeconfig"
 }
 
 # ── Azure Workload Identity federation ────────────────────────────────────────
