@@ -65,45 +65,49 @@ The cluster publishes its OIDC discovery document (`/.well-known/openid-configur
 The following diagram shows the universal pattern for Kubernetes OIDC federation, regardless of which external identity provider is involved:
 
 ```mermaid
-flowchart TB
-    subgraph K8s["Kubernetes Cluster"]
-        API["API Server<br/>(OIDC Issuer)"]
-        SA["ServiceAccount"]
-        POD["Pod"]
-        TV["Projected Token Volume<br/>(signed JWT)"]
-        
-        SA -->|"bound to"| POD
-        API -->|"issues signed token"| TV
-        TV -->|"mounted into"| POD
-    end
-
-    subgraph OIDC["OIDC Discovery (Public Endpoint)"]
-        DISC["/.well-known/openid-configuration"]
-        JWKS["JWKS (public signing keys)"]
-    end
-
-    subgraph IDP["External Identity Provider"]
-        VAL["Token Validation"]
-        EXCHANGE["Token Exchange"]
-        ACCESS["Short-lived Access Token"]
-        
-        VAL --> EXCHANGE --> ACCESS
-    end
-
-    subgraph TARGET["Target Cloud Resource"]
-        RES["Cloud Service<br/>(Key Vault, S3, etc.)"]
-    end
-
-    API -->|"publishes"| DISC
-    API -->|"publishes"| JWKS
-    POD -->|"1. Presents OIDC token"| VAL
-    IDP -->|"2. Fetches JWKS to verify signature"| JWKS
-    ACCESS -->|"3. Pod uses access token"| RES
-
-    style K8s fill:#326CE5,color:#fff
-    style IDP fill:#FF9900,color:#000
-    style TARGET fill:#00A4EF,color:#fff
-    style OIDC fill:#2ECC71,color:#fff
+graph TB
+    K8s["🐳 Kubernetes Cluster"]
+    API["API Server<br/>(OIDC Issuer)"]
+    SA["ServiceAccount"]
+    POD["Pod"]
+    TV["Projected Token Volume<br/>(signed JWT)"]
+    
+    DISC["/.well-known/openid-configuration"]
+    JWKS["JWKS (signing keys)"]
+    
+    IDP["🔐 External Identity Provider"]
+    VAL["Token Validation"]
+    EXCHANGE["Token Exchange"]
+    ACCESS["Short-lived Access Token"]
+    
+    RES["☁️ Cloud Resource<br/>(Key Vault, S3, etc.)"]
+    
+    K8s --> API
+    SA -->|bound to| POD
+    API -->|issues| TV
+    TV -->|mounted| POD
+    
+    API -->|publishes| DISC
+    API -->|publishes| JWKS
+    
+    POD -->|1️⃣ Present<br/>OIDC token| IDP
+    IDP --> VAL
+    VAL -->|fetch| JWKS
+    VAL --> EXCHANGE
+    EXCHANGE --> ACCESS
+    
+    ACCESS -->|2️⃣ Shorter-lived<br/>access token| POD
+    POD -->|3️⃣ Use token| RES
+    
+    classDef kubernetes fill:#326CE5,stroke:#1a3a73,stroke-width:2px,color:#fff
+    classDef idp fill:#FF9900,stroke:#cc7700,stroke-width:2px,color:#000
+    classDef cloud fill:#00A4EF,stroke:#0073ba,stroke-width:2px,color:#fff
+    classDef oidc fill:#2ECC71,stroke:#27ae60,stroke-width:2px,color:#000
+    
+    class K8s,SA,POD,TV,API kubernetes
+    class IDP,VAL,EXCHANGE,ACCESS idp
+    class RES cloud
+    class DISC,JWKS oidc
 ```
 
 ### Trust Establishment
@@ -174,44 +178,43 @@ This demo provisions a minimal, cost-optimised AWS EKS cluster and installs the 
 ### Demo Architecture
 
 ```mermaid
-flowchart LR
+graph LR
     subgraph AWS["AWS (EKS Cluster)"]
-        direction TB
         VPC["VPC 10.0.0.0/16"]
-        EKS["EKS Control Plane<br/>OIDC Issuer enabled"]
-        NG["Node Group<br/>Spot instances (public subnets)"]
+        EKS["EKS API<br/>OIDC Issuer"]
+        NG["Node Group<br/>Spot instances"]
         
-        subgraph PODS["Kubernetes Resources"]
-            CM["cert-manager"]
-            WH["Azure WI Webhook<br/>(mutating admission)"]
-            NS["Namespace: msal-go-demo"]
-            SA["ServiceAccount: msal-go-sa<br/>annotated with azure client-id"]
-            APP["msal-go Pod<br/>label: azure.workload.identity/use"]
-        end
-
-        VPC --- EKS --- NG
-        NG --- PODS
-        WH -->|"injects env vars +<br/>projected token volume"| APP
-        CM -->|"TLS certs"| WH
+        CM["cert-manager"]
+        WH["Azure WI Webhook"]
+        SA["ServiceAccount<br/>msal-go-sa"]
+        APP["msal-go Pod"]
+        
+        VPC --> EKS --> NG
+        NG --> APP
+        WH -->|injects token| APP
+        CM -->|TLS| WH
     end
 
     subgraph AZURE["Azure (Entra ID)"]
-        ENT["Entra App Registration"]
-        FIC["Federated Identity Credential<br/>issuer: EKS OIDC URL<br/>subject: system:serviceaccount:msal-go-demo:msal-go-sa<br/>audience: api://AzureADTokenExchange"]
-        KV["Azure Key Vault<br/>Secret: 'Hello from Key Vault!'"]
+        ENT["Entra App<br/>Registration"]
+        FIC["Federated<br/>Credential"]
+        KV["Azure<br/>Key Vault"]
         
         ENT --- FIC
-        ENT -->|"get secret permission"| KV
+        ENT -->|get secret| KV
     end
 
-    APP -->|"1. Present OIDC token"| ENT
-    ENT -->|"2. Validate via JWKS"| EKS
-    ENT -->|"3. Return access token"| APP
-    APP -->|"4. GET secret"| KV
-
-    style AWS fill:#FF9900,color:#000
-    style AZURE fill:#0078D4,color:#fff
-    style PODS fill:#326CE5,color:#fff
+    EKS -.->|OIDC issuer| ENT
+    APP -->|1. OIDC token| ENT
+    ENT -->|2. Check JWKS| EKS
+    ENT -->|3. Access token| APP
+    APP -->|4. GET secret| KV
+    
+    classDef aws fill:#FF9900,stroke:#cc7700,stroke-width:2px,color:#000
+    classDef azure fill:#0078D4,stroke:#005a9e,stroke-width:2px,color:#fff
+    
+    class AWS aws
+    class AZURE azure
 ```
 
 ### Demo Token Exchange Flow
